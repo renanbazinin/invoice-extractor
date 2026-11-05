@@ -90,6 +90,8 @@ interface Marker {
   role: Role
   /** Offset in the line where the party text starts (after the marker), or null for a heading line. */
   contentFrom: number | null
+  /** An inline marker printed flush against its text, with no colon ("לקוח הדמו בע"מ"). */
+  glued?: boolean
 }
 
 /** A role marker at the start of a line: a heading ("לכבוד", "Bill To") or inline ("לכבוד: X"). */
@@ -109,7 +111,7 @@ export function markerOf(line: Line): Marker | null {
   const rest = text.slice(m.end)
   const colon = /^\s*[:：]/.test(rest)
   if (colon) return { line, role, contentFrom: m.end + rest.indexOf(':') + 1 }
-  if (m.strength === 'strong' && /\p{L}{2,}/u.test(rest) && role !== 'ship_to') return { line, role, contentFrom: m.end }
+  if (m.strength === 'strong' && /\p{L}{2,}/u.test(rest) && role !== 'ship_to') return { line, role, contentFrom: m.end, glued: true }
   return null
 }
 
@@ -143,7 +145,8 @@ function isItemHeader(fc: FieldsContext, line: Line): boolean {
 
 /** The lines under a marker that belong to its party. */
 function regionLines(fc: FieldsContext, marker: Line, stops: Set<string>): Line[] {
-  const own = markerOf(marker)?.role
+  const ownMarker = markerOf(marker)
+  const own = ownMarker?.role
   const lines = (fc.index.pageLines.get(marker.page) ?? []).filter((l) => l.bbox.y0 > marker.bbox.y0 + 0.5 * lineHeight(fc, marker)).sort((a, b) => a.bbox.y0 - b.bbox.y0)
   const out: Line[] = []
   const h = lineHeight(fc, marker)
@@ -156,9 +159,12 @@ function regionLines(fc: FieldsContext, marker: Line, stops: Set<string>): Line[
     if (pitch > limit) break
     if (stops.has(l.id) || fc.itemLineIds.has(l.id) || isItemHeader(fc, l)) break
     // Another party's marker ends the region; a name label of the same party ("פרטי הספק" over
-    // "שם החברה") is one of its attributes.
+    // "שם החברה") is one of its attributes. Under a heading ("לכבוד", "Bill to"), a line that
+    // starts with this party's own noun flush against more words ("לקוח הדמו בע"מ") is the
+    // party's text: the heading already marked the block, and the noun may begin the name.
     const next = markerOf(l)
-    if (next && !(next.role === own && !(senseOf(l.text).primary?.concept ?? '').startsWith('role.'))) break
+    const heading = ownMarker?.contentFrom === null
+    if (next && !(next.role === own && (!(senseOf(l.text).primary?.concept ?? '').startsWith('role.') || (heading && next.glued)))) break
     out.push(l)
     pitches.push(pitch)
     prevY0 = l.bbox.y0
@@ -483,9 +489,24 @@ export function loosePhone(text: string): Found<string> | null {
 const MAIN_PHONE = /^(?:טל|טלפון|tel|phone|telephone|telefon|téléphone|teléfono|telefono|telefoon|telefone|fon)/i
 const MOBILE = /^(?:נייד|סלולר|פלאפון|mobile|mob|cell|handy|mobil|portable|móvil|celular|cellulare|mobiel|telem)/i
 
-function nameDrafts(fc: FieldsContext, region: Region, field: CanonicalField, pairs: Pair[]): Draft[] {
+/**
+ * Under a heading marker ("לכבוד", "Bill to"), a line that starts with the party's own noun flush
+ * against more words ("לקוח הדמו בע"מ") is the party's text, not a second label: the heading
+ * already marked the block, and the noun may be the name's first word (see regionLines).
+ */
+function headingAbsorbs(fc: FieldsContext, region: Region, p: Pair): boolean {
+  if (region.kind !== 'marker' || !region.marker || markerOf(region.marker)?.contentFrom !== null) return false
+  if (!(p.sense.primary?.concept ?? '').startsWith('role.')) return false
+  const line = fc.index.line.get(p.labelLineIds[0] ?? '')
+  if (!line || line.id === region.marker.id) return false
+  const mk = markerOf(line)
+  return !!mk?.glued && mk.role === region.role
+}
+
+function nameDrafts(fc: FieldsContext, region: Region, field: CanonicalField, allPairs: Pair[]): Draft[] {
   const out: Draft[] = []
   const signals = roleSignal(region)
+  const pairs = allPairs.filter((p) => !headingAbsorbs(fc, region, p))
   // Labelled names: "שם העסק", "שם הלקוח", "שם", a role label with the name as its value.
   for (const p of pairs) {
     const c = p.sense.primary?.concept ?? ''

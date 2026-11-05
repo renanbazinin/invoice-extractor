@@ -136,7 +136,9 @@ export const STATUS_POLICY: Record<FieldKind, KindPolicy> = {
     verified:
       'the full chain of role evidence: one candidate (no competitor), prior >= 0.7, a party role marker (signal ' +
       'role:<party> or a party label), a legal-entity suffix (so it is the legal name the truth asks for), whole printed ' +
-      'line(s) or a whole "·"/"|"-separated piece of one (not truncated), in the same block as that party\'s verified, ' +
+      'line(s) or a whole "·"/"|"-separated piece of one (not truncated), not read from a party noun printed flush ' +
+      'against it in the same type ("לקוח הדמו בע"מ" may be one name: only a colon, a separator, another type or a ' +
+      'salutation such as "לכבוד" sets a label apart), in the same block as that party\'s verified, ' +
       "checksum-valid tax id, different from the other party's name, not under the other party's marker, and no legal " +
       'name of the party printed in another script next to it (bilingual names: neither is verified over the other).',
     needsReview: 'competing names, weak reading.',
@@ -336,6 +338,13 @@ export const CUES = {
   legalSuffix: ['בע"מ', 'בעמ', 'בע"ם', '(ע"ר)', 'ע"ר', 'עמותה', 'שותפות', 'חל"צ', 'ltd', 'limited', 'inc', 'llc', 'plc', 'gmbh', 'ag', 'kg', 'sarl', 's.a.r.l', 's.a.', 'sa', 'sas', 'bv', 'b.v.', 'nv', 'n.v.', 'spa', 's.p.a.', 's.r.l.', 'srl', 'sl', 's.l.', 'corp', 'corporation', 'company', 'co.'],
   supplierLabel: ['ספק', 'מאת', 'עוסק מורשה', 'from', 'supplier', 'vendor', 'seller', 'issued by', 'lieferant', 'fournisseur', 'proveedor', 'fornitore', 'leverancier'],
   customerLabel: ['לכבוד', "לכב'", 'לקוח', 'למזמין', 'מזמין', 'bill to', 'billed to', 'customer', 'client', 'sold to', 'kunde', 'rechnungsempfänger', 'destinataire', 'cliente', 'klant'],
+  /**
+   * Party labels that never begin a name: salutations and prepositions ("לכבוד", "מאת", "Bill
+   * to", "From"). A party noun ("לקוח", "ספק", "Customer", "Client") can be a name's first word
+   * ("Client Focus Ltd."), so flush against a name it may be part of it. A label phrase ending in
+   * to/from/by counts as one too ("Invoice to", "Received from", "Issued by").
+   */
+  salutation: ['לכבוד', "לכב'", "לכ'", 'חשבון לכבוד', 'חשבון עבור', 'עבור', 'אל', 'מאת', 'התקבל מאת', 'התקבלו מאת', 'קיבלנו מאת', 'למזמין', 'לידי', 'לידיעת', 'to', 'from', 'attn', 'attn.', 'attention', 'an', 'à', 'a', 'para', 'per', 'aan', 'für'],
   /**
    * Addressee abbreviations the shared lexicon does not list yet ("לכב'" for לכבוד). A line that
    * starts with one opens the customer's block.

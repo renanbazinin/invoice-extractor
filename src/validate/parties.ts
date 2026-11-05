@@ -59,6 +59,10 @@ export function decideName(choice: Choice, ctx: DecideContext): Decision {
   const covers = ctx.doc.coversLines(wordIdsOf(g.rep.evidence), labelWords)
   if (covers === null) failed.push('words unknown')
   else if (!covers && !wholeSegment(wordIdsOf(g.rep.evidence), labelWords, ctx)) failed.push('part of a longer line')
+  const glued = gluedLabel(g, ctx)
+  if (glued) failed.push(`"${glued}" is printed flush against the name and may be part of it`)
+  const noun = leadingPartyNoun(value)
+  if (noun) failed.push(`starts with the party word "${noun}", which may be a label`)
   if (conf < OCR.labelOnly) failed.push('low text confidence')
   const taxId = ctx.decided.get(party === 'supplier' ? 'supplier.tax_id' : 'customer.tax_id')
   const taxIdChecked = taxId?.status === 'verified' && taxId.passed.some((c) => c.id.startsWith('checksum:'))
@@ -118,6 +122,56 @@ export function decideName(choice: Choice, ctx: DecideContext): Decision {
     ? [{ severity: 'info', code: 'name.bilingual', message: `${field}: "${value}" and "${twin}" are the same party's legal name in two scripts; neither is verified over the other.`, fields: [field] }]
     : []
   return base('proposed', { competitor: competitorsOf(g, alts).length > 0, issues })
+}
+
+/**
+ * The label of a name read from its own line, printed flush against the name: the next word in
+ * reading order, with no colon, dash or separator between them and in the same type. "לקוח הדמו
+ * בע"מ" then reads as label + name or as one name ("Client Focus Ltd." starts with a label word
+ * too), and nothing on the page tells which. A salutation never begins a name ("לכבוד", "Bill
+ * to"), and a label set in another type (a regular "Customer" before a bold name) is a label.
+ * Returns the label's text when it is ambiguous, else null.
+ */
+export function gluedLabel(g: ValueGroup, ctx: DecideContext): string | null {
+  const label = g.rep.label
+  if (!label?.wordIds.length) return null
+  const lastLabel = label.wordIds[label.wordIds.length - 1]!
+  const line = ctx.doc.lineOfWord(lastLabel)
+  if (!line) return null
+  const valueIds = new Set(wordIdsOf(g.rep.evidence))
+  const at = line.wordIds.indexOf(lastLabel)
+  const next = line.wordIds[at + 1]
+  if (next === undefined || !valueIds.has(next)) return null
+  const labelWords = label.wordIds.map((id) => ctx.doc.word(id))
+  const valueWords = line.wordIds.filter((id) => valueIds.has(id)).map((id) => ctx.doc.word(id))
+  if (labelWords.some((w) => !w) || valueWords.some((w) => !w) || !valueWords.length) return null
+  if (/[:：\-–—]$/.test(labelWords[labelWords.length - 1]!.text) || /^[:：\-–—]/.test(valueWords[0]!.text)) return null
+  if (isSalutation(label.text)) return null
+  const bold = (ws: typeof labelWords) => ws.every((w) => w!.bold)
+  const size = (ws: typeof labelWords) => ws.reduce((s, w) => s + w!.fontSize, 0) / ws.length
+  const ratio = size(labelWords) / size(valueWords)
+  const sameType = bold(labelWords) === bold(valueWords) && ratio > 1 / 1.15 && ratio < 1.15
+  return sameType ? label.text : null
+}
+
+/**
+ * The party noun a name starts with ("לקוח הדמו בע"מ", "Client Focus Ltd."), or null. Whether the
+ * noun is a label printed flush against the name or the name's first word, the page cannot tell.
+ */
+export function leadingPartyNoun(name: string): string | null {
+  const folded = foldForMatch(name)
+  for (const cue of [...CUES.customerLabel, ...CUES.supplierLabel]) {
+    if (isSalutation(cue)) continue
+    const c = foldForMatch(cue)
+    if (folded.startsWith(c + ' ') && /[\p{L}\p{N}]/u.test(folded.slice(c.length))) return cue
+  }
+  return null
+}
+
+function isSalutation(text: string): boolean {
+  const t = foldForMatch(text).replace(/[\s:：.,\-–—]+$/u, '').trim()
+  if (CUES.salutation.some((s) => foldForMatch(s) === t)) return true
+  return /(^|\s)(to|from|by)$/.test(t)
 }
 
 /** Separator tokens that split a printed line into independent pieces ("X בע"מ · ח.פ. 123 · רח' …"). */
