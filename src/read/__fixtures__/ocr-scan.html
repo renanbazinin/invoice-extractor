@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>ocr-scan</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #fff; }
+  body { width: 680px; padding: 24px 30px; font-family: Arial, sans-serif; font-size: 13px; color: #111; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .num { direction: ltr; unicode-bidi: isolate; font-family: "Courier New", monospace; letter-spacing: 2px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+  th { background: #333; color: #fff; font-weight: bold; padding: 7px 8px; text-align: right; }
+  td { padding: 7px 8px; border-bottom: 1px solid #bbb; }
+  td.n, th.n { text-align: left; }
+  .tot { width: 300px; margin-top: 14px; margin-right: auto; }
+  .tot div { display: flex; justify-content: space-between; padding: 4px 0; }
+  .due { background: #2b2b2b; color: #fff; padding: 6px 8px !important; font-weight: bold; }
+</style>
+</head>
+<body>
+  <h1>חשבונית מס 4417</h1>
+  <div>דפוס הגליל בע"מ · ח"פ: <span class="num">514356789</span></div>
+  <table>
+    <tr><th>פריט</th><th>כמות</th><th class="n">מחיר</th><th class="n">סה"כ</th></tr>
+    <tr><td>מחברות משרד</td><td>3</td><td class="n"><span class="num">₪ 12.50</span></td><td class="n"><span class="num">₪ 37.50</span></td></tr>
+    <tr><td>נייר צילום A4</td><td>20</td><td class="n"><span class="num">₪ 59.85</span></td><td class="n"><span class="num">₪ 1,197.00</span></td></tr>
+  </table>
+  <div class="tot">
+    <div><span>סה"כ לפני מע"מ</span><span class="num">₪ 1,234.50</span></div>
+    <div><span>מע"מ 18%</span><span class="num">₪ 222.21</span></div>
+    <div class="due"><span>סה"כ לתשלום</span><span class="num">₪ 1,456.71</span></div>
+  </div>
+</body>
+</html>

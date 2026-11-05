@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>two-column</title>
+<!-- A two-column header (supplier on the right, customer on the left, same baselines), a
+     label/value row with a far-away value, and a full-width paragraph below. -->
+<style>
+  @page { size: A4; margin: 20mm; }
+  body { font-family: Arial; font-size: 11pt; margin: 0; }
+  .cols { display: flex; justify-content: space-between; }
+  .cols > div { width: 40%; }
+  .kv { display: flex; justify-content: space-between; width: 60%; margin-top: 20pt; }
+  p { margin-top: 20pt; }
+</style>
+</head>
+<body>
+  <div class="cols">
+    <div>
+      <div><b>ספק: אבג מערכות בע"מ</b></div>
+      <div>ח.פ. 512345678</div>
+      <div>רחוב הרצל 12, תל אביב</div>
+      <div>טל' 03-1234567</div>
+    </div>
+    <div>
+      <div><b>לקוח: חברת הדוגמה בע"מ</b></div>
+      <div>ח.פ. 520000001</div>
+      <div>שדרות רוטשילד 1, תל אביב</div>
+      <div>טל' 03-7654321</div>
+    </div>
+  </div>
+  <div class="kv"><span>תאריך הפקה:</span><span>31/10/2026</span></div>
+  <p>הערות: התשלום יבוצע בהעברה בנקאית לחשבון הספק בתוך 30 יום ממועד הפקת החשבונית.</p>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="he" dir="rtl"><head><meta charset="utf-8"><title>חשבונית מס 1001 (הדגמה)</title>
+<!-- Demo document for the web app. Every name, number and address in it is made up. -->
+<style>
+@page { size: A4; margin: 14mm 15mm 16mm 15mm; }
+:root { --c: #3157c8; --cl: #eef2fc; --ink: #222a36; --mut: #6b7484; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Arial, sans-serif; color: var(--ink); font-size: 12.5px; }
+.top { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid var(--c); padding-bottom: 12px; }
+.brand .nm { font-size: 22px; font-weight: bold; }
+.brand .sub { color: var(--mut); font-size: 12px; margin-top: 2px; }
+.brand .det { font-size: 11.5px; color: var(--mut); margin-top: 6px; line-height: 1.6; }
+.doc { text-align: left; }
+.doc .t { font-size: 20px; font-weight: bold; color: var(--c); }
+.doc .no { font-size: 15px; margin-top: 3px; }
+.meta { display: flex; gap: 24px; margin: 14px 0 12px; }
+.cust { flex: 1; background: var(--cl); border-radius: 8px; padding: 10px 14px; line-height: 1.6; }
+.cust b { font-size: 14px; }
+.dates { width: 240px; line-height: 1.9; }
+.dates span { color: var(--mut); display: inline-block; width: 100px; }
+table { width: 100%; border-collapse: collapse; }
+.items th { background: var(--c); color: #fff; font-weight: normal; padding: 6px 8px; text-align: right; }
+.items td { padding: 7px 8px; border-bottom: 1px solid #dde3ee; }
+td.n, th.n { text-align: left; direction: ltr; white-space: nowrap; }
+td.c, th.c { text-align: center; }
+.sums { width: 290px; margin-right: auto; margin-top: 10px; }
+.sums td { padding: 4px 8px; }
+.sums tr.tot td { border-top: 2px solid var(--c); font-size: 15px; font-weight: bold; padding-top: 7px; }
+.pay { margin-top: 22px; line-height: 1.7; }
+.pay h3 { color: var(--c); font-size: 14px; margin: 0 0 4px; }
+.foot { position: fixed; bottom: 0; left: 0; right: 0; border-top: 1px solid #dde3ee; padding-top: 6px; text-align: center; font-size: 10px; color: var(--mut); }
+</style></head><body>
+<div class="top">
+  <div class="brand">
+    <div class="nm">סטודיו הדמו בע"מ</div>
+    <div class="sub">עיצוב גרפי · מיתוג · דפוס</div>
+    <div class="det">ח.פ. 515555555<br>רחוב הדמו 1, תל אביב-יפו<br>טל' 03-1234567 · office@example.com</div>
+  </div>
+  <div class="doc">
+    <div class="t">חשבונית מס</div>
+    <div class="no">מס' 1001</div>
+  </div>
+</div>
+
+<div class="meta">
+  <div class="cust">
+    <div style="color:var(--mut);font-size:11px">לכבוד</div>
+    <b>רשת הדמו בע"מ</b><br>
+    ח.פ. 522222223<br>
+    שדרות הדמו 2, חיפה
+  </div>
+  <div class="dates">
+    <div><span>תאריך</span>18/11/2026</div>
+    <div><span>מספר הזמנה</span>PO-2026-17</div>
+    <div><span>תנאי תשלום</span>שוטף + 30</div>
+  </div>
+</div>
+
+<table class="items">
+  <thead><tr><th class="c" style="width:34px">#</th><th>תיאור</th><th class="c" style="width:60px">כמות</th><th class="n" style="width:90px">מחיר</th><th class="n" style="width:100px">סה"כ ₪</th></tr></thead>
+  <tbody>
+    <tr><td class="c">1</td><td>עיצוב לוגו ושפה גרפית</td><td class="n">1</td><td class="n">4,200.00</td><td class="n">4,200.00</td></tr>
+    <tr><td class="c">2</td><td>עיצוב כרטיסי ביקור</td><td class="n">2</td><td class="n">350.00</td><td class="n">700.00</td></tr>
+    <tr><td class="c">3</td><td>הדפסת כרטיסי ביקור (500 יח')</td><td class="n">2</td><td class="n">180.00</td><td class="n">360.00</td></tr>
+    <tr><td class="c">4</td><td>שעות עבודה נוספות</td><td class="n">3</td><td class="n">220.00</td><td class="n">660.00</td></tr>
+  </tbody>
+</table>
+
+<table class="sums">
+  <tr><td>סה"כ לפני מע"מ</td><td class="n">₪5,920.00</td></tr>
+  <tr><td>מע"מ 18%</td><td class="n">₪1,065.60</td></tr>
+  <tr class="tot"><td>סה"כ לתשלום</td><td class="n">₪6,985.60</td></tr>
+</table>
+
+<div class="pay">
+  <h3>פרטי תשלום</h3>
+  העברה בנקאית: בנק 12, סניף 345, חשבון 123456
+</div>
+
+<div class="foot">מסמך הדגמה — כל השמות, המספרים והכתובות בדויים · Demo document: all details are fictitious</div>
+</body></html>

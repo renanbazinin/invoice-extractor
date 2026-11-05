@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>he-invoice</title>
+<!-- Hebrew RTL invoice-like page: numbers, dates, codes, negative amounts, brackets, an English
+     phrase inside a Hebrew line, a far-away value (tab-stop gap), a bordered table and a
+     footer in another font. Reader tests assert its lines in logical order. -->
+<style>
+  @page { size: A4; margin: 15mm; }
+  body { font-family: Arial; font-size: 11pt; margin: 0; }
+  h1 { font-size: 18pt; margin: 0 0 4pt; }
+  h2 { font-size: 15pt; margin: 0 0 4pt; }
+  .section { margin-top: 18pt; }
+  table { width: 100%; border-collapse: collapse; margin-top: 18pt; }
+  th, td { border: 0.75pt solid #000; padding: 3pt 6pt; text-align: right; }
+  td.num { text-align: left; }
+  .totals { width: 45%; margin-top: 16pt; margin-right: auto; }
+  .totals div { display: flex; justify-content: space-between; padding: 2pt 0; }
+  .footer { margin-top: 24pt; font-family: David; font-size: 12pt; }
+</style>
+</head>
+<body>
+  <h1>אבג מערכות מידע בע"מ</h1>
+  <div>ח.פ. 512345678</div>
+  <div>רחוב הרצל 12, תל אביב 6100000</div>
+  <div>טל' 03-1234567 | info@abc-systems.co.il</div>
+
+  <div class="section">
+    <h2>חשבונית מס 2026-0042</h2>
+    <div>תאריך: 31/10/2026</div>
+    <div>מספר חשבונית Invoice No 12345 לפי הזמנה</div>
+    <div>לכבוד: חברת הדוגמה בע"מ, ח.פ. 520000001</div>
+  </div>
+
+  <table>
+    <tr><th>מק"ט</th><th>תיאור</th><th>כמות</th><th>מחיר</th><th>סה"כ</th></tr>
+    <tr><td>ABC-12</td><td>שירות ייעוץ (שעות)</td><td class="num">10</td><td class="num">100.00</td><td class="num">1,000.00</td></tr>
+    <tr><td>DSC-5</td><td>הנחת לקוח</td><td class="num">1</td><td class="num">-300.00</td><td class="num">-300.00</td></tr>
+  </table>
+
+  <div class="totals">
+    <div><span>סה"כ לפני מע"מ</span><span>700.00</span></div>
+    <div><span>מע"מ 18%</span><span>126.00</span></div>
+    <div><span>סה"כ לתשלום: 826.00 ₪</span></div>
+  </div>
+
+  <div class="section">
+    <div>תנאי תשלום: שוטף + 30</div>
+    <div>סה"כ לתשלום: 1,180.00 ₪</div>
+  </div>
+
+  <div class="footer">המסמך הופק ע"י מערכת ABC Billing</div>
+</body>
+</html>

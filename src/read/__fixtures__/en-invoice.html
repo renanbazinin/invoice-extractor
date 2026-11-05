@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>en-invoice</title>
+<!-- English LTR page with a Hebrew name inside an English line and a borderless table. -->
+<style>
+  @page { size: A4; margin: 18mm; }
+  body { font-family: Arial; font-size: 11pt; margin: 0; }
+  h1 { font-size: 18pt; margin: 0 0 4pt; }
+  h2 { font-size: 14pt; margin: 18pt 0 4pt; }
+  table { width: 100%; border-collapse: collapse; margin-top: 16pt; }
+  th, td { padding: 4pt 8pt; text-align: left; }
+  th.num, td.num { text-align: right; }
+  .totals { width: 40%; margin-top: 14pt; margin-left: auto; }
+  .totals div { display: flex; justify-content: space-between; padding: 2pt 0; }
+</style>
+</head>
+<body>
+  <h1>ACME Software Ltd.</h1>
+  <div>VAT Reg. No. GB123456789</div>
+  <div>12 High Street, London EC1A 1BB</div>
+
+  <h2>TAX INVOICE</h2>
+  <div>Invoice No: INV-2026-0042</div>
+  <div>Date: 31/10/2026</div>
+  <div>Customer: אבג מערכות בע"מ (Israel)</div>
+
+  <table>
+    <tr><th>Description</th><th class="num">Qty</th><th class="num">Unit price</th><th class="num">Amount</th></tr>
+    <tr><td>Consulting services</td><td class="num">10</td><td class="num">100.00</td><td class="num">1,000.00</td></tr>
+    <tr><td>Discount</td><td class="num">1</td><td class="num">-50.00</td><td class="num">-50.00</td></tr>
+  </table>
+
+  <div class="totals">
+    <div><span>Subtotal</span><span>950.00</span></div>
+    <div><span>VAT 20%</span><span>190.00</span></div>
+    <div><span>Total due</span><span>£1,140.00</span></div>
+  </div>
+</body>
+</html>

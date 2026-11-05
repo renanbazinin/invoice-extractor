@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>two-pages</title>
+<!-- Two pages: ids restart per page (p1…, p2…), the second page has its own text. -->
+<style>
+  @page { size: A4; margin: 20mm; }
+  body { font-family: Arial; font-size: 12pt; margin: 0; }
+  .page1 { break-after: page; }
+</style>
+</head>
+<body>
+  <div class="page1">
+    <div>חשבונית מס 7788 עמוד 1 מתוך 2</div>
+    <div>שורה ראשונה בעמוד הראשון</div>
+  </div>
+  <div>
+    <div>עמוד 2 מתוך 2</div>
+    <div>סה"כ לתשלום: 2,360.00 ₪</div>
+  </div>
+</body>
+</html>

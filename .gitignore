@@ -1,0 +1,22 @@
+node_modules
+tmp
+coverage
+eval/out
+web/public/vendor
+web/public/samples
+web/dist
+.claude
+
+# Private test data. These invoices look real (names, ID numbers, bank details), so they are never
+# published, and neither is the generator that makes them or its pools of names and addresses.
+eval/corpus
+eval/handmade
+eval/blind
+eval/families
+eval/generate.ts
+eval/generate.test.ts
+eval/lib/*
+!eval/lib/scan.ts
+!eval/lib/rng.ts
+# Fonts used only by the generator.
+assets

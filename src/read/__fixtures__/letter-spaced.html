@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>letter-spaced</title>
+<style>
+  @page { size: A5; margin: 12mm; }
+  body { font-family: Arial, sans-serif; font-size: 10pt; }
+  .t { font-size: 20pt; letter-spacing: 3px; direction: ltr; text-align: left; }
+  .he { font-size: 14pt; letter-spacing: 3px; text-align: center; margin: 6mm 0; }
+  .lab { font-size: 7.5pt; text-transform: uppercase; letter-spacing: 1.4px; direction: ltr; text-align: left; margin-top: 6mm; }
+  .tot { direction: ltr; text-align: left; margin-top: 6mm; }
+  .tot b { letter-spacing: 1px; }
+</style>
+</head>
+<body>
+  <div class="t">TAX INVOICE</div>
+  <div class="he">חשבונית זיכוי</div>
+  <div class="lab">Bill to</div>
+  <div dir="ltr" style="text-align:left">Acme Trading Ltd</div>
+  <div class="tot"><b>TOTA</b><b>L</b> Total due 1,180.00</div>
+  <div class="lab" style="font-size: 9pt; letter-spacing: 2.5px">Total due</div>
+</body>
+</html>

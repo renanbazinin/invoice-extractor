@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Invoice INV-1001 (demo)</title>
+<!-- Demo document for the web app. Every name, number and address in it is made up. -->
+<style>
+@page { size: Letter; margin: 14mm 15mm 16mm 15mm; }
+:root { --c: #0f766e; --cl: #ecf7f5; --ink: #1f2933; --mut: #66727f; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Arial, sans-serif; color: var(--ink); font-size: 12.5px; }
+.top { display: flex; justify-content: space-between; align-items: flex-start; }
+.nm { font-size: 22px; font-weight: bold; color: var(--c); }
+.det { color: var(--mut); line-height: 1.6; margin-top: 4px; }
+.doc { text-align: right; }
+.doc .t { font-size: 28px; letter-spacing: 2px; color: var(--c); }
+.kv { margin-top: 6px; line-height: 1.7; }
+.kv span { color: var(--mut); display: inline-block; width: 90px; text-align: left; }
+.bill { margin: 20px 0 14px; background: var(--cl); padding: 10px 14px; border-radius: 6px; line-height: 1.6; width: 55%; }
+.bill .h { color: var(--mut); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+table { width: 100%; border-collapse: collapse; }
+.items th { text-align: left; border-bottom: 2px solid var(--c); padding: 6px 8px; font-size: 11px; text-transform: uppercase; color: var(--mut); }
+.items td { padding: 8px; border-bottom: 1px solid #e3e8ec; }
+.n { text-align: right; white-space: nowrap; }
+.sums { width: 280px; margin-left: auto; margin-top: 10px; }
+.sums td { padding: 4px 8px; }
+.sums tr.tot td { border-top: 2px solid var(--c); font-size: 15px; font-weight: bold; padding-top: 7px; }
+.notes { margin-top: 24px; color: var(--mut); line-height: 1.6; }
+.foot { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; font-size: 10px; color: var(--mut); border-top: 1px solid #e3e8ec; padding-top: 6px; }
+</style></head><body>
+<div class="top">
+  <div>
+    <div class="nm">Demo Supplies Ltd.</div>
+    <div class="det">100 Demo Street, Springfield, IL 62701<br>Phone (212) 555-0100 · billing@example.com<br>Tax ID 12-3456789</div>
+  </div>
+  <div class="doc">
+    <div class="t">INVOICE</div>
+    <div class="kv">
+      <div><span>Invoice #</span> INV-1001</div>
+      <div><span>Date</span> Nov 2, 2026</div>
+      <div><span>Due date</span> Dec 2, 2026</div>
+      <div><span>PO number</span> PO-7788</div>
+      <div><span>Terms</span> Net 30</div>
+    </div>
+  </div>
+</div>
+
+<div class="bill">
+  <div class="h">Bill to</div>
+  <b>Demo Customer Inc.</b><br>
+  200 Demo Avenue, Riverside, CA 92501
+</div>
+
+<table class="items">
+  <thead><tr><th>Description</th><th class="n">Qty</th><th class="n">Unit price</th><th class="n">Amount</th></tr></thead>
+  <tbody>
+    <tr><td>Office chairs, ergonomic</td><td class="n">4</td><td class="n">189.00</td><td class="n">756.00</td></tr>
+    <tr><td>Standing desk frame</td><td class="n">2</td><td class="n">310.00</td><td class="n">620.00</td></tr>
+    <tr><td>Monitor arm, dual</td><td class="n">3</td><td class="n">74.50</td><td class="n">223.50</td></tr>
+    <tr><td>Delivery and assembly</td><td class="n">1</td><td class="n">120.00</td><td class="n">120.00</td></tr>
+  </tbody>
+</table>
+
+<table class="sums">
+  <tr><td>Subtotal</td><td class="n">$1,719.50</td></tr>
+  <tr><td>Sales tax (8%)</td><td class="n">$137.56</td></tr>
+  <tr class="tot"><td>Total due</td><td class="n">$1,857.06</td></tr>
+</table>
+
+<div class="notes">Please pay by bank transfer within 30 days. Thank you for your business.</div>
+
+<div class="foot">Demo document: every name, number and address on it is made up.</div>
+</body></html>

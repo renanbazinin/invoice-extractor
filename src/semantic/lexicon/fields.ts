@@ -1,0 +1,443 @@
+import type { ConceptSpec } from '../types'
+
+/**
+ * Labels of the document-level canonical fields. Notes on the less obvious choices:
+ * - "No." / "#" / "Nr." / "N°" and "מס'" / "מספר" are interchangeable in the matcher, so
+ *   "invoice no." also covers "Invoice #", "Invoice Number" and "Invoice Nr.".
+ * - "סה"כ" alone is weak and listed under subtotal, total and the line-amount column: the matcher
+ *   reports the extra readings in `also`, and arithmetic decides.
+ * - total_due names both `total` and `amount_due` (one printed figure can be both, see the field
+ *   definitions); validation decides whether payments separate them.
+ * - "סה"כ * לפני מע"מ" / "סה"כ * כולל מע"מ": whatever is summed (חיובים, זיכוי, האירוע, עבודה), a
+ *   sum before VAT is the subtotal and a sum including VAT is the total. The wildcard never stands
+ *   for a tax word, so "סה"כ מע"מ לתשלום" stays VAT.
+ * - "תאריך ערך" / "ת. ערך" is a value date: of a payment in a payments table, of the payment due
+ *   on an invoice ("תאריך ערך: 15/12/2026" next to שוטף + 45). Never a supply date.
+ * - "Gross Amount" is pre-tax in US usage and the total elsewhere: listed under both, arithmetic
+ *   decides.
+ */
+export const FIELD_CONCEPTS: ConceptSpec[] = [
+  {
+    id: 'invoice_number',
+    kind: 'field',
+    fields: ['invoice_number'],
+    values: ['id'],
+    phrases: {
+      he: [
+        'מספר חשבונית', 'חשבונית מס מספר', 'חשבונית מספר', 'חשבונית מס קבלה מספר', 'חשבונית זיכוי מספר',
+        'מספר חשבונית זיכוי', 'מספר חשבונית מס', 'מספר חשבונית מס קבלה', 'מספר מסמך', 'מסמך מספר', 'מספר קבלה', 'קבלה מספר',
+        'זיכוי מספר', 'חשבון עסקה מספר', 'מספר חשבון עסקה', 'הצעת מחיר מספר', 'מספר הצעת מחיר',
+        'מספר חשבונית פרופורמה', 'פרופורמה מספר', 'חשבונית מס מרכזת מספר', 'חשבונית מרכזת מספר', 'מספר חשבונית מרכזת',
+        'מספר הודעת זיכוי', 'מספר תעודת זיכוי', 'מספר דרישת תשלום', 'דרישה מספר',
+        '~מספר', '~מספר הצעה', '~מספר אסמכתא חשבונית',
+      ],
+      en: [
+        'invoice no.', 'invoice id', 'inv no.', 'inv.', 'tax invoice no.', 'bill no.', 'document no.',
+        'receipt no.', 'credit note no.', 'quote no.', 'quotation no.', 'proforma no.', 'proforma invoice no.', 'pi no.',
+        'invoice ref', 'vat invoice no.', 'credit memo no.', 'debit note no.', 'estimate no.', 'statement no.',
+        '~invoice reference', '~no.', '~doc no.', '~reference no.',
+      ],
+      de: [
+        'rechnung nr.', 'rechnungsnummer', 'rechnungs-nr.', 'rechnungsnr.', 're-nr.', 'rg-nr.',
+        'gutschrift nr.', 'gutschriftsnummer', 'proforma-rechnung nr.', 'angebotsnummer', 'angebot nr.',
+        '~belegnummer', '~beleg-nr.', '~dokumentnummer',
+      ],
+      fr: [
+        'no. de facture', 'numéro de facture', 'facture no.', 'no. facture', "no. d'avoir", 'numéro de document', 'avoir no.',
+        'devis no.', 'no. de devis', 'numéro de devis', '~no. de pièce',
+      ],
+      es: [
+        'factura no.', 'número de factura', 'no. de factura', 'no. factura', 'nº de factura', 'no. de documento',
+        'número de documento', 'presupuesto no.', 'no. de presupuesto', '~folio',
+      ],
+      it: ['fattura no.', 'numero fattura', 'n. fattura', 'numero documento', 'n. documento', 'numero preventivo'],
+      nl: ['factuurnummer', 'factuur no.', 'factuurnr.', 'creditnotanummer', 'offertenummer', 'documentnummer'],
+      pt: ['fatura no.', 'número da fatura', 'no. fatura', 'número do documento', 'no. do documento'],
+    },
+  },
+  {
+    id: 'invoice_date',
+    kind: 'field',
+    fields: ['invoice_date'],
+    values: ['date'],
+    phrases: {
+      he: [
+        'תאריך חשבונית', 'תאריך הפקה', 'תאריך מסמך', 'תאריך הנפקה', 'תאריך הוצאה', 'תאריך קבלה',
+        'תאריך חשבונית מס', 'הופק בתאריך', 'הופקה בתאריך', 'תאריך עריכה', 'תאריך הפקת החשבונית', 'תאריך הפקת המסמך',
+        'תאריך הוצאת החשבונית', 'תאריך הנפקת החשבונית', 'תאריך הצעת המחיר', 'תאריך ההצעה', 'תאריך הקבלה',
+        'תאריך החשבון', 'תאריך זיכוי', '~הופקה ב', '~הופק ב', '~תאריך', '~ת. הפקה', '~תאריך חיוב', '~תאריך העסקה',
+      ],
+      en: [
+        'invoice date', 'date of invoice', 'issue date', 'date of issue', 'date issued', 'issued on',
+        'document date', 'inv. date', 'tax invoice date', 'receipt date', 'credit note date', 'bill date', 'invoice dated',
+        'quote date', 'quotation date', '~billing date', '~statement date', '~date', '~dated',
+      ],
+      de: ['rechnungsdatum', 'belegdatum', 'ausstellungsdatum', 'rechnungs-datum', 'datum der rechnung', 'angebotsdatum', '~datum'],
+      fr: ['date de facture', 'date de facturation', "date d'émission", 'date facture', 'date de la facture', 'émise le', 'date du devis'],
+      es: ['fecha de factura', 'fecha de emisión', 'fecha factura', 'fecha de expedición', 'fecha de la factura', '~fecha'],
+      it: ['data fattura', 'data documento', 'data di emissione', 'data della fattura', '~data'],
+      nl: ['factuurdatum', 'datum factuur', 'offertedatum', '~datum'],
+      pt: ['data da fatura', 'data de emissão', 'data fatura', 'data do documento'],
+    },
+  },
+  {
+    id: 'due_date',
+    kind: 'field',
+    fields: ['due_date'],
+    values: ['date'],
+    phrases: {
+      he: [
+        'לתשלום עד', 'תאריך פירעון', 'מועד פירעון', 'מועד תשלום', 'מועד לתשלום', 'תאריך לתשלום',
+        'יש לשלם עד', 'לפירעון עד', 'תשלום עד', 'תאריך אחרון לתשלום', 'נא לשלם עד', 'לתשלום לא יאוחר',
+        'תאריך פרעון', 'מועד פרעון', 'לפרעון עד', 'מועד אחרון לתשלום', 'יש לשלם לא יאוחר', 'לתשלום בתאריך', 'ישולם עד',
+        '~תאריך תשלום', '~פירעון', '~פרעון', '~תאריך ערך',
+      ],
+      en: [
+        'due date', 'payment due', 'payment due date', 'due by', 'due on', 'pay by', 'date due', 'payable by',
+        'please pay by', 'pay before', 'payable on', 'payment deadline', 'to be paid by', 'payment due by', '~due',
+      ],
+      de: ['fälligkeitsdatum', 'fällig am', 'zahlbar bis', 'fälligkeit', 'zahlungsfrist', 'fällig bis', 'zahlbar bis zum', 'zahlungstermin'],
+      fr: ["date d'échéance", 'échéance', 'à payer avant le', 'date limite de paiement', 'payable le', 'date limite de règlement', 'à régler avant le'],
+      es: ['fecha de vencimiento', 'vencimiento', 'fecha límite de pago', 'vence el'],
+      it: ['data di scadenza', 'scadenza', 'data scadenza', 'scadenza pagamento'],
+      nl: ['vervaldatum', 'uiterste betaaldatum', 'te betalen voor', 'betalen voor', 'vervaldag', 'te voldoen voor'],
+      pt: ['data de vencimento', 'vencimento', 'data limite de pagamento'],
+    },
+  },
+  {
+    id: 'delivery_date',
+    kind: 'field',
+    fields: ['delivery_date'],
+    values: ['date'],
+    phrases: {
+      he: [
+        'תאריך אספקה', 'מועד אספקה', 'תאריך השירות', 'תאריך מתן השירות', 'תאריך ביצוע העסקה',
+        'תאריך מסירה', 'מועד מסירה', 'סופק בתאריך', 'סופקה בתאריך', 'בוצע בתאריך', 'תאריך ביצוע העבודה', 'תאריך ביצוע השירות',
+        'מועד ביצוע', 'מועד ביצוע העבודה', 'תאריך העבודה', 'מועד השירות', 'תאריך הספקה', 'תאריך אספקת השירות',
+        'ת. אספקה', '~תאריך משלוח', '~תאריך ביצוע', '~תקופת שירות', '~תאריך האירוע', '~מועד האירוע', '~תאריך התקנה',
+        '~תאריך הטיפול',
+      ],
+      en: [
+        'delivery date', 'date of supply', 'supply date', 'service date', 'date of delivery', 'date of service',
+        'performance date', 'date of taxable supply', 'taxable supply date', 'date of performance', 'delivered on', 'date delivered',
+        'completion date', '~tax point', '~ship date', '~shipping date', '~date of shipment', '~shipment date', '~service period', '~event date',
+        '~work date',
+      ],
+      de: [
+        'lieferdatum', 'leistungsdatum', 'liefertermin', 'liefer-/leistungsdatum', 'leistungszeitpunkt', 'datum der leistung',
+        'tag der leistung', 'lieferung am', 'ausführungsdatum', '~leistungszeitraum',
+      ],
+      fr: ['date de livraison', 'date de prestation', 'date de réalisation', "date d'exécution", 'date de la prestation', 'livré le'],
+      es: ['fecha de entrega', 'fecha de suministro', 'fecha de servicio', 'fecha de operación', 'fecha de prestación'],
+      it: ['data di consegna', 'data consegna', 'data di effettuazione', 'data prestazione', 'data operazione'],
+      nl: ['leverdatum', 'leveringsdatum', 'datum uitvoering', 'uitvoeringsdatum', 'datum levering', 'prestatiedatum'],
+      pt: ['data de entrega', 'data de fornecimento', 'data da prestação', 'data do serviço'],
+    },
+  },
+  {
+    id: 'po_number',
+    kind: 'field',
+    fields: ['po_number'],
+    values: ['id'],
+    phrases: {
+      he: [
+        'מספר הזמנה', 'הזמנה מספר', 'הזמנת רכש', 'מספר הזמנת רכש', 'הזמנת רכש מספר', 'מספר הזמנת לקוח',
+        'הזמנתכם', 'הזמנתכם מספר', 'מספר הזמנתכם', 'הזמנה שלכם', 'מספר הזמנה שלכם', 'מספר הזמנה שלך', 'מספר הזמנת עבודה',
+        '~הזמנת לקוח', '~הזמנה', '~אסמכתת לקוח',
+      ],
+      en: [
+        'purchase order', 'purchase order no.', 'po no.', 'p.o. no.', 'po', 'p.o.', 'customer po', 'your order no.',
+        'po number', "buyer's order no.", "customer's order no.", 'customer order no.', 'your po', 'p/o no.',
+        '~order no.', '~your order', '~order ref', '~your ref',
+      ],
+      de: ['bestellnummer', 'bestell-nr.', 'ihre bestellung', 'bestellung nr.', 'ihre bestellnummer', 'ihre bestell-nr.', '~auftragsnummer', '~auftrag nr.'],
+      fr: ['bon de commande', 'no. de commande', 'numéro de commande', 'commande no.', 'bon de commande no.', 'votre commande no.', '~votre commande'],
+      es: ['orden de compra', 'no. de pedido', 'número de pedido', 'pedido no.', 'su pedido', '~pedido'],
+      it: ['ordine di acquisto', "ordine d'acquisto", 'numero ordine', 'n. ordine', 'vostro ordine', '~ordine'],
+      nl: ['inkoopordernummer', 'bestelnummer', 'ordernummer', 'inkooporder', 'uw ordernummer', 'uw bestelnummer', 'uw order'],
+      pt: ['ordem de compra', 'no. do pedido', 'número do pedido', 'nota de encomenda', '~pedido'],
+    },
+  },
+  {
+    id: 'allocation_number',
+    kind: 'field',
+    fields: ['allocation_number'],
+    values: ['id'],
+    note: 'Israel Tax Authority allocation number (חשבוניות ישראל).',
+    phrases: {
+      he: ['מספר הקצאה', 'מספר אישור הקצאה', 'הקצאה מספר', 'קוד הקצאה', 'מספר הקצאת חשבונית', '~הקצאה'],
+      en: ['allocation no.', 'allocation number', 'allocation id', 'ita allocation no.', '~allocation'],
+    },
+  },
+  {
+    id: 'currency',
+    kind: 'field',
+    fields: ['currency'],
+    values: ['currency'],
+    phrases: {
+      he: ['מטבע', 'מטבע החשבונית', 'סוג מטבע', 'מטבע החשבון', 'מטבע העסקה', 'מטבע המסמך', 'מטבע התשלום'],
+      en: ['currency', 'invoice currency', 'billing currency', 'currency code', '~curr.'],
+      de: ['währung', 'rechnungswährung'],
+      fr: ['devise', 'monnaie'],
+      es: ['moneda', 'divisa'],
+      it: ['valuta'],
+      nl: ['valuta', 'munteenheid'],
+      pt: ['moeda'],
+    },
+  },
+  {
+    id: 'subtotal',
+    kind: 'field',
+    fields: ['subtotal'],
+    values: ['amount'],
+    phrases: {
+      he: [
+        'סה"כ לפני מע"מ', 'סכום לפני מע"מ', 'סה"כ ללא מע"מ', 'סכום ללא מע"מ', 'סה"כ ביניים', 'סכום ביניים',
+        'סה"כ לא כולל מע"מ', 'סה"כ מחיר לפני מע"מ', 'סך הכל לפני מע"מ', 'סך הכל ללא מע"מ', 'סה"כ חיובים לפני מע"מ',
+        'סה"כ * לפני מע"מ', 'סה"כ * ללא מע"מ', 'סה"כ * לא כולל מע"מ', 'סה"כ לפני מע"מ והנחה', 'סה"כ חייב במע"מ', 'חייב במע"מ',
+        'סה"כ עסקאות חייבות', 'סכום החייב במע"מ',
+        '~סה"כ חייב מע"מ', '~סכום חייב במע"מ', '~סה"כ לפני הנחה', '~סה"כ נטו', '~סה"כ', '~סה"כ מחיר', '~נטו', '~סה"כ שורות',
+        '~סה"כ פריטים לפני מע"מ', '~סה"כ חיובים', '~סה"כ חיוב', '~סה"כ סכום', '~סה"כ חייב', '~סה"כ טיפולים',
+        '~סה"כ שירותים', '~סה"כ מוצרים', '~סה"כ עבודות', '~סה"כ * לחשבון זה', '~סה"כ * בחשבון זה',
+      ],
+      en: [
+        'subtotal', 'sub total', 'net amount', 'net total', 'total net', 'amount before vat', 'amount before tax',
+        'total before tax', 'total before vat', 'total excl. vat', 'total excluding vat', 'total ex vat',
+        'total excl. tax', 'total excluding tax', 'total ex. tax', 'total before discount', 'subtotal excl. vat',
+        'subtotal excl. gst', 'total excl. gst', 'total ex gst', 'amount excl. vat', 'amount excl. tax', 'net value',
+        'nett', 'nett total', 'total nett', 'net subtotal', 'amount before gst', 'total before gst',
+        '~taxable amount', '~net', '~items total', '~goods total', '~excl. vat', '~gross amount',
+      ],
+      de: [
+        'zwischensumme', 'nettobetrag', 'summe netto', 'gesamt netto', 'nettosumme', 'netto gesamt', 'gesamtbetrag netto',
+        'rechnungsbetrag netto', 'nettowert', 'warenwert netto', 'zwischensumme netto', '~netto', '~warenwert',
+      ],
+      fr: ['total ht', 'montant ht', 'sous-total', 'total hors taxes', 'montant hors taxes', 'base ht', 'montant total ht', 'total net ht', 'total hors tva', '~hors taxes'],
+      es: ['base imponible', 'importe neto', 'total sin iva', 'subtotal sin iva', 'importe base', 'total base imponible', '~neto'],
+      it: ['imponibile', 'totale imponibile', 'subtotale', 'totale netto', 'importo netto', 'totale merce'],
+      nl: ['subtotaal', 'totaal excl. btw', 'bedrag excl. btw', 'netto bedrag', 'nettobedrag', 'totaal exclusief btw', 'subtotaal excl. btw'],
+      pt: ['valor líquido', 'total sem iva', 'base tributável', 'total ilíquido', 'base de incidência', 'valor sem iva'],
+    },
+  },
+  {
+    id: 'discount',
+    kind: 'field',
+    fields: ['discount'],
+    values: ['amount', 'percent'],
+    phrases: {
+      he: [
+        'הנחה', 'הנחה כללית', 'סה"כ הנחה', 'הנחה מסחרית', 'הנחת סל', 'הנחה על החשבון', 'הנחת לקוח', 'סכום הנחה',
+        'הנחת מסמך', 'הנחת חשבון', 'הנחת *', 'הנחה מיוחדת', 'הנחה כוללת', 'סה"כ הנחות', 'הנחות', 'סכום ההנחה', 'הנחה בש"ח',
+      ],
+      en: [
+        'discount', 'total discount', 'less discount', 'discount amount', 'invoice discount', 'special discount',
+        'volume discount', 'trade discount', 'customer discount', 'framework discount', 'loyalty discount', 'promotional discount',
+        'early payment discount', 'cash discount', 'group discount', 'member discount', 'document discount',
+        'less: discount', '~rebate',
+      ],
+      de: ['rabatt', 'nachlass', 'preisnachlass', 'abzüglich rabatt', 'gesamtrabatt', 'sonderrabatt', 'mengenrabatt', '~skonto'],
+      fr: ['remise', 'rabais', 'remise globale', 'remise commerciale', 'remise exceptionnelle', 'remise fidélité', 'remise sur facture', '~escompte'],
+      es: ['descuento', 'dto. general', 'descuento comercial', 'descuento especial', 'descuento por pronto pago'],
+      it: ['sconto', 'sconto totale', 'sconto commerciale', 'sconto incondizionato'],
+      nl: ['korting', 'totale korting', 'korting op factuur', 'extra korting'],
+      pt: ['desconto', 'desconto global', 'desconto comercial'],
+    },
+  },
+  {
+    id: 'tax',
+    kind: 'field',
+    fields: ['tax_amount', 'tax_rate'],
+    values: ['amount', 'percent'],
+    note: 'Generic tax label: the value next to it is the amount, the rate, or both ("מע"מ 18% 180.00").',
+    phrases: {
+      he: ['מע"מ', 'מס ערך מוסף', 'מע"מ בשיעור', '~מס'],
+      en: ['vat', 'tax', 'sales tax', 'gst', 'hst', 'value added tax', 'v.a.t.', 'gst/hst', '~taxes'],
+      de: ['mwst.', 'ust.', 'mehrwertsteuer', 'umsatzsteuer', 'mw.-st.'],
+      fr: ['tva', 't.v.a.'],
+      es: ['iva', 'i.v.a.'],
+      it: [],
+      nl: ['btw'],
+      pt: ['~imposto'],
+    },
+  },
+  {
+    id: 'tax_rate',
+    kind: 'field',
+    fields: ['tax_rate'],
+    values: ['percent'],
+    phrases: {
+      he: ['שיעור מע"מ', 'אחוז מע"מ', 'מע"מ %', '% מע"מ', 'שיעור המס'],
+      en: ['vat rate', 'tax rate', 'vat %', 'tax %', 'gst rate', 'rate of vat', '% vat', 'gst %'],
+      de: ['steuersatz', 'mwst.-satz', 'ust.-satz', 'mwst. %', 'ust. %'],
+      fr: ['taux de tva', 'taux tva', 'tva %'],
+      es: ['tipo de iva', 'tipo iva', '% iva', 'iva %'],
+      it: ['aliquota iva', 'aliquota', 'iva %'],
+      nl: ['btw-tarief', 'btw %', 'btw-percentage'],
+      pt: ['taxa de iva', 'taxa iva'],
+    },
+  },
+  {
+    id: 'tax_amount',
+    kind: 'field',
+    fields: ['tax_amount'],
+    values: ['amount'],
+    phrases: {
+      he: [
+        'סכום מע"מ', 'סה"כ מע"מ', 'סך הכל מע"מ', 'מע"מ בש"ח', 'סכום המס', '~מע"מ לתשלום', 'מתוכו מע"מ', 'מזה מע"מ', 'כולל מע"מ בסך',
+        'מתוכם מע"מ', 'מתוכה מע"מ', 'סכום מס ערך מוסף', 'סה"כ מס ערך מוסף',
+      ],
+      en: [
+        'vat amount', 'tax amount', 'total vat', 'total tax', 'amount of vat', 'vat total', 'tax total',
+        'sales tax amount', 'gst amount', 'total gst', 'includes vat', 'of which vat', 'hst amount', 'sales tax total',
+        'includes gst', 'gst included',
+      ],
+      de: ['mwst.-betrag', 'mehrwertsteuerbetrag', 'ust.-betrag', 'steuerbetrag', 'summe mwst.', 'enthaltene mwst.', 'summe ust.', 'enthaltene ust.'],
+      fr: ['montant tva', 'montant de la tva', 'total tva', 'dont tva'],
+      es: ['importe iva', 'cuota iva', 'total iva', 'cuota de iva', 'importe del iva', 'iva repercutido'],
+      it: ['importo iva', 'totale iva', 'imposta'],
+      nl: ['btw-bedrag', 'bedrag btw', 'totaal btw'],
+      pt: ['valor do iva', 'total iva', 'valor iva'],
+    },
+  },
+  {
+    id: 'total',
+    kind: 'field',
+    fields: ['total'],
+    values: ['amount'],
+    phrases: {
+      he: [
+        'סה"כ כולל מע"מ', 'סה"כ כולל', 'סכום כולל מע"מ', 'סה"כ אחרי מע"מ', 'סה"כ לאחר מע"מ', 'סה"כ חשבונית',
+        'סך הכל כולל מע"מ', 'סה"כ כללי', 'סה"כ סופי', 'סכום החשבונית', 'סה"כ מחיר כולל מע"מ', 'סכום כולל',
+        'סה"כ כולל מע"מ בש"ח', 'סה"כ במסמך', 'סה"כ קבלה', 'סה"כ בקבלה', 'סה"כ זיכוי', 'סה"כ * כולל מע"מ',
+        'סה"כ קנייה', 'סה"כ קניה', 'סה"כ חיוב לתקופה', 'סה"כ חיובים לתקופה', 'סה"כ חיובים לתקופה כולל מע"מ', 'סה"כ חשבון נוכחי',
+        'סה"כ חשבון', 'סה"כ החשבון', 'סכום החשבון', 'סך כל העסקה', 'סכום העסקה', 'סה"כ עסקה', 'סה"כ ברוטו', 'סה"כ להזמנה',
+        'סה"כ הצעה', 'סה"כ הצעת מחיר', '~סה"כ חייב', '~סה"כ חיובים', '~סה"כ חיוב', '~סה"כ סכום', '~סה"כ טיפולים', '~סה"כ שירותים',
+        '~סה"כ מוצרים', '~סה"כ עבודות', '~סה"כ * לחשבון זה', '~סה"כ * בחשבון זה', '~סך הכל', '~סה"כ',
+      ],
+      en: [
+        'grand total', 'invoice total', 'total amount', 'total incl. vat', 'total including vat', 'total inc. vat',
+        'total incl. tax', 'total including tax', 'total inc. tax', 'total invoice amount', 'invoice amount',
+        'total value', 'total gross', 'gross total', 'total with vat', 'total (incl. gst)', 'amount incl. vat',
+        'total incl. gst', 'total inc. gst', 'total charges', 'total current charges', 'amount incl. tax', 'total (gross)',
+        '~total', '~gross amount', '~gross', '~amount', '~order total', '~sum',
+      ],
+      de: [
+        'gesamtbetrag', 'rechnungsbetrag', 'gesamtsumme', 'endbetrag', 'bruttobetrag', 'summe brutto', 'gesamt brutto',
+        'rechnungssumme', 'endsumme', 'rechnungsendbetrag', 'gesamtbetrag brutto', '~summe', '~gesamt', '~brutto',
+      ],
+      fr: ['total ttc', 'montant ttc', 'montant total', 'total toutes taxes comprises', 'total facture', 'montant total ttc', '~total'],
+      es: ['total factura', 'importe total', 'total con iva', 'total iva incluido', 'total importe', '~total'],
+      it: ['totale fattura', 'totale documento', 'importo totale', 'totale ivato', '~totale'],
+      nl: ['totaalbedrag', 'totaal incl. btw', 'factuurbedrag', 'totaal factuur', 'totaal inclusief btw', '~totaal'],
+      pt: ['total da fatura', 'valor total', 'total com iva', '~total'],
+    },
+  },
+  {
+    id: 'total_due',
+    kind: 'field',
+    fields: ['total', 'amount_due'],
+    values: ['amount'],
+    phrases: {
+      he: [
+        'סה"כ לתשלום', 'סה"כ לתשלום כולל מע"מ', 'סך הכל לתשלום', 'סך הכל לתשלום כולל מע"מ', 'סה"כ לתשלום בש"ח', 'סה"כ לחיוב',
+        'סכום לחיוב', 'סה"כ * לתשלום', 'סכום החשבון לתשלום', 'סה"כ סכום לתשלום',
+      ],
+      en: ['total due', 'total amount due', 'total to pay', 'total payable', 'total amount payable', 'amount to pay', 'total due now'],
+      de: ['gesamt zu zahlen', 'zu zahlender betrag', 'zahlbetrag', 'zu zahlender gesamtbetrag'],
+      fr: ['net à payer', 'total à payer', 'montant à payer', 'net à payer ttc'],
+      es: ['total a pagar', 'importe a pagar'],
+      it: ['totale da pagare', 'netto a pagare'],
+      nl: ['totaal te betalen'],
+      pt: ['total a pagar'],
+    },
+  },
+  {
+    id: 'amount_paid',
+    kind: 'field',
+    fields: ['amount_paid'],
+    values: ['amount'],
+    note: 'A bare advance noun next to a percentage ("מקדמה (30%)") is re-read as other.payment_schedule by the matcher.',
+    phrases: {
+      he: [
+        'שולם', 'סכום ששולם', 'שולם בפועל', 'סה"כ שולם', 'מקדמה', 'ניכוי מקדמה', 'סה"כ תקבולים', 'סכום שהתקבל',
+        'תשלום מקדמה', 'שולם מראש', 'מקדמה ששולמה', 'מקדמות ששולמו', 'מקדמה שהתקבלה', 'בניכוי מקדמה', 'ניכוי מקדמות',
+        'סה"כ תשלומים', 'סה"כ התקבל', 'תשלום שהתקבל', 'תשלומים שהתקבלו', 'שולם עד כה', 'שולם עד היום', 'סה"כ ששולם',
+        'סכום התקבולים', 'סה"כ שולם בפועל', '~תקבול', '~תקבולים', '~התקבל', '~=תשלומים',
+      ],
+      en: [
+        'amount paid', 'total paid', 'paid', 'payment received', 'payments received', 'less payment', 'less payments',
+        'deposit', 'less deposit', 'advance payment', 'prepayment', 'prepaid', 'credit applied', 'payments/credits',
+        'amount received', 'paid to date', 'deposit received', 'deposit paid', 'paid on account', 'payment on account',
+        'payments on account', 'already paid', 'amount already paid', 'less amount paid', 'advance received', 'advance paid',
+        'less advance', 'payments applied', 'less paid', '~payments', '~credits',
+      ],
+      de: [
+        'bezahlt', 'anzahlung', 'erhaltene anzahlung', 'bereits bezahlt', 'abzüglich anzahlung', 'geleistete anzahlung',
+        'bereits gezahlt', 'abschlagszahlung', 'erhaltene abschlagszahlung', 'erhaltene zahlung',
+      ],
+      fr: ['acompte', 'déjà payé', 'montant payé', 'payé', 'acompte versé', 'déjà réglé', 'acompte reçu', 'montant réglé'],
+      es: ['pagado', 'anticipo', 'importe pagado', 'a cuenta', 'entregado a cuenta', 'anticipo recibido', 'pagos a cuenta', 'entregas a cuenta'],
+      it: ['pagato', 'acconto', 'importo pagato', 'già pagato', 'acconto ricevuto'],
+      nl: ['betaald', 'aanbetaling', 'reeds betaald', 'voldaan', 'ontvangen aanbetaling', 'vooruitbetaald'],
+      // Not a bare "pago": in Spanish it is a payment ("Pago a 60 días", "Forma de pago"), not "paid".
+      pt: ['valor pago', 'total pago', 'montante pago', 'adiantamento', 'sinal', 'já pago'],
+    },
+  },
+  {
+    id: 'amount_due',
+    kind: 'field',
+    fields: ['amount_due'],
+    values: ['amount'],
+    phrases: {
+      he: [
+        'לתשלום', 'יתרה לתשלום', 'סכום לתשלום', 'יתרת חוב', 'נותר לתשלום', 'יתרה לתשלום כולל מע"מ',
+        'סכום לתשלום כולל מע"מ', 'סכום לתשלום בש"ח', 'יתרה לפירעון', 'יתרה לגבייה', 'סכום לגבייה', 'סה"כ יתרה לתשלום',
+        'סה"כ חוב', 'סה"כ חוב לתשלום', 'יתרת חוב לתשלום', 'הסכום לתשלום', 'נותרה לתשלום', 'יתרה סופית לתשלום', '~יתרה',
+      ],
+      en: [
+        'amount due', 'balance due', 'amount payable', 'please pay', 'pay this amount', 'outstanding balance',
+        'balance outstanding', 'remaining balance', 'balance payable', 'amount outstanding', 'now due', 'net amount due',
+        'balance to pay', 'amount to be paid', 'please remit', 'remaining amount due',
+        '~balance', '~outstanding',
+      ],
+      de: ['zu zahlen', 'offener betrag', 'restbetrag', 'noch zu zahlen', 'fälliger betrag', 'offener saldo', 'verbleibender betrag'],
+      fr: ['reste à payer', 'solde dû', 'montant dû', 'à payer', 'solde à payer', 'reste dû', 'solde restant dû', '~solde'],
+      es: ['saldo pendiente', 'a pagar', 'importe pendiente', 'pendiente de pago', '~saldo'],
+      it: ['importo da pagare', 'da pagare', 'saldo da pagare', 'residuo da pagare', '~saldo'],
+      nl: ['te betalen', 'openstaand bedrag', 'nog te betalen', 'openstaand saldo', '~saldo'],
+      pt: ['valor a pagar', 'saldo devedor', 'a pagar', 'valor em dívida', '~saldo'],
+    },
+  },
+  {
+    id: 'rounding',
+    kind: 'field',
+    fields: ['rounding'],
+    values: ['amount'],
+    phrases: {
+      he: ['עיגול', 'עיגול אגורות', 'הפרשי עיגול', 'הפרש עיגול', 'עיגול סכום', 'סכום עיגול', 'עיגול חשבון', 'עיגול שקלים', 'הפרשי אגורות', 'הפרש אגורות'],
+      en: ['rounding', 'rounding adjustment', 'round off', 'round-off', 'rounding difference', 'rounding amount', 'cash rounding'],
+      de: ['rundung', 'rundungsdifferenz', 'rundungsbetrag'],
+      fr: ['arrondi', "écart d'arrondi"],
+      es: ['redondeo', 'ajuste por redondeo'],
+      it: ['arrotondamento', 'abbuono'],
+      nl: ['afronding', 'afrondingsverschil'],
+      pt: ['arredondamento', 'acerto de arredondamento'],
+    },
+  },
+  {
+    id: 'payment_terms',
+    kind: 'field',
+    fields: ['payment_terms'],
+    values: ['text'],
+    phrases: {
+      he: ['תנאי תשלום', 'תנאי אשראי', 'תנאי התשלום', 'מועד התשלום', 'תנאי תשלום ואספקה', '~תנאים', '~שוטף', '~תשלום מיידי'],
+      en: ['payment terms', 'terms of payment', 'credit terms', 'terms', 'payment term', 'payment conditions', '~net'],
+      de: ['zahlungsbedingungen', 'zahlungsziel', 'zahlungskonditionen', 'zahlungsbedingung'],
+      fr: ['conditions de paiement', 'modalités de paiement', 'conditions de règlement', 'délai de paiement', 'modalités de règlement', '~règlement'],
+      es: ['condiciones de pago', 'términos de pago', 'plazo de pago'],
+      it: ['condizioni di pagamento', 'termini di pagamento', '~modalità di pagamento'],
+      nl: ['betalingsvoorwaarden', 'betalingstermijn', 'betaaltermijn', 'betalingscondities', 'betalingsconditie'],
+      pt: ['condições de pagamento', 'prazo de pagamento'],
+    },
+  },
+]
