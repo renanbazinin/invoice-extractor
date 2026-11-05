@@ -1,4 +1,4 @@
-import type { CanonicalField, DocumentType, ExtractedField, ExtractionResult, FieldStatus, NormalizedValue } from '../../src/model/types'
+import type { CanonicalField, DocumentType, ExtractionResult, FieldStatus, NormalizedValue } from '../../src/model/types'
 
 export const FIELD_GROUPS: { title: string; fields: { key: CanonicalField; en: string; he: string }[] }[] = [
   {
@@ -96,27 +96,6 @@ export function showValue(v: NormalizedValue | null, raw: string): string {
   }
 }
 
-/** A plain value for CSV export (money without grouping, ISO dates). */
-export function plainValue(f: ExtractedField | null | undefined): string {
-  const v = f?.normalized
-  if (!f) return ''
-  if (!v) return f.rawValue
-  switch (v.kind) {
-    case 'money':
-      return v.amount
-    case 'percent':
-    case 'decimal':
-    case 'text':
-    case 'document_type':
-    case 'id':
-      return v.value
-    case 'date':
-      return v.iso
-    case 'currency':
-      return v.code
-  }
-}
-
 /** Notes worth showing next to a value: an ambiguous date, a failed checksum. */
 export function valueNotes(v: NormalizedValue | null): string[] {
   if (!v) return []
@@ -132,9 +111,9 @@ export const STATUS: Record<FieldStatus, { label: string; mark: string; hint: st
   needs_review: { label: 'Needs review', mark: '!', hint: 'Conflicting readings, a failed check or a weak reading. A person should look.' },
 }
 
-export function counts(r: ExtractionResult): Record<FieldStatus, number> {
+export function counts(fields: ExtractionResult['fields']): Record<FieldStatus, number> {
   const c: Record<FieldStatus, number> = { verified: 0, proposed: 0, needs_review: 0 }
-  for (const f of Object.values(r.fields)) if (f) c[f.status]++
+  for (const f of Object.values(fields)) if (f) c[f.status]++
   return c
 }
 

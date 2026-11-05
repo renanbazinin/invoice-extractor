@@ -1,4 +1,4 @@
-import type { BBox, Evidence, ExtractedField, ExtractionResult, LineItem } from '../../src/model/types'
+import type { BBox, CanonicalField, Evidence, ExtractedField, ExtractionResult, LineItem } from '../../src/model/types'
 
 /** What is highlighted on the page: the printed value, its label, or a whole row. */
 export interface Box {
@@ -28,10 +28,10 @@ export function lineFocus(r: ExtractionResult, lineId: string): Focus {
 }
 
 /** Where a clicked word is used, by priority: a standard field, a line item, another field. */
-export function whereUsed(r: ExtractionResult, wordId: string): { tab: 'fields' | 'items' | 'other' | 'text'; focus: Focus } {
+export function whereUsed(r: ExtractionResult, fields: Partial<Record<CanonicalField, ExtractedField>>, wordId: string): { tab: 'fields' | 'items' | 'other' | 'text'; focus: Focus } {
   const has = (ev: readonly Evidence[] | null | undefined) => !!ev?.some((e) => e.wordIds.includes(wordId))
-  for (const [key, f] of Object.entries(r.fields)) if (f && has(f.evidence)) return { tab: 'fields', focus: fieldFocus(key, f) }
-  for (const [key, f] of Object.entries(r.fields)) if (f?.labelEvidence && has([f.labelEvidence])) return { tab: 'fields', focus: fieldFocus(key, f) }
+  for (const [key, f] of Object.entries(fields)) if (f && has(f.evidence)) return { tab: 'fields', focus: fieldFocus(key, f) }
+  for (const [key, f] of Object.entries(fields)) if (f?.labelEvidence && has([f.labelEvidence])) return { tab: 'fields', focus: fieldFocus(key, f) }
   for (const li of r.lineItems) if (has([li.row])) return { tab: 'items', focus: itemFocus(li) }
   for (const [i, d] of r.discovered.entries())
     if (has(d.evidence) || (d.labelEvidence && has([d.labelEvidence]))) return { tab: 'other', focus: fieldFocus(`other:${i}`, d) }

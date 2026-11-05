@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import type { ExtractedField, ExtractionResult, FieldStatus } from '../../../src/model/types'
+import type { AppliedTemplate, SupplierTemplate } from '../../../src/templates'
 import { fieldFocus, itemFocus, lineFocus, type Focus } from '../focus'
 import { FIELD_GROUPS, FIELD_LABEL, STATUS, counts, formatMs, showValue, valueNotes } from '../format'
 import { download, resultJson, type Job } from '../jobs'
@@ -8,6 +9,13 @@ export type Tab = 'fields' | 'items' | 'other' | 'checks' | 'text' | 'json'
 
 interface Props {
   job: Job
+  /** The supplier template applied to this document, if any. */
+  applied: AppliedTemplate | null
+  supplierTemplates: SupplierTemplate[]
+  /** undefined: match automatically; null: none; else a template id. */
+  onSupplierTemplate: (id: string | null | undefined) => void
+  onCreateSupplierTemplate: () => void
+  onEditSupplierTemplate: (t: SupplierTemplate) => void
   tab: Tab
   onTab: (t: Tab) => void
   active: Focus | null
@@ -16,10 +24,13 @@ interface Props {
   onPin: (f: Focus) => void
 }
 
-export function ResultPanel({ job, tab, onTab, active, pinned, onHover, onPin }: Props) {
+export function ResultPanel({ job, applied, supplierTemplates, onSupplierTemplate, onCreateSupplierTemplate, onEditSupplierTemplate, tab, onTab, active, pinned, onHover, onPin }: Props) {
   const r = job.result!
-  const c = counts(r)
+  const fields = applied?.fields ?? r.fields
+  const c = counts(fields)
   const problems = r.issues.filter((i) => i.severity !== 'info')
+  const tplNotes = applied?.notes.filter((n) => n.outcome !== 'same') ?? []
+  const choice = job.supplierTemplate === undefined ? 'auto' : (job.supplierTemplate ?? 'none')
   const others = r.discovered.length
   const failed = r.checks.filter((x) => x.status === 'fail').length
   const row = (f: Focus) => ({
@@ -54,6 +65,31 @@ export function ResultPanel({ job, tab, onTab, active, pinned, onHover, onPin }:
             </span>
           )}
         </div>
+        <div className="tpl-bar">
+          <span className="muted small">Supplier template</span>
+          <select
+            value={choice}
+            onChange={(e) => onSupplierTemplate(e.target.value === 'auto' ? undefined : e.target.value === 'none' ? null : e.target.value)}
+            aria-label="Supplier template"
+          >
+            <option value="auto">{choice === 'auto' && applied ? `Automatic: ${applied.template.name}` : 'Automatic'}</option>
+            <option value="none">None</option>
+            {supplierTemplates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          {applied ? (
+            <button className="link" onClick={() => onEditSupplierTemplate(applied.template)}>
+              {applied.template.id.startsWith('builtin:') ? 'View' : 'Edit'}
+            </button>
+          ) : (
+            <button className="link" onClick={onCreateSupplierTemplate} title="Teach the app this supplier's layout: its labels, boxes and fixed details">
+              Create one for this supplier
+            </button>
+          )}
+        </div>
       </header>
 
       <nav className="tabs" role="tablist">
@@ -80,12 +116,20 @@ export function ResultPanel({ job, tab, onTab, active, pinned, onHover, onPin }:
       <div className="tab-body">
         {tab === 'fields' && (
           <>
-            {problems.length > 0 && (
+            {(problems.length > 0 || tplNotes.length > 0) && (
               <ul className="issues">
                 {problems.map((i, k) => (
                   <li key={k} className={`issue issue-${i.severity}`}>
                     <span className="issue-mark">{i.severity === 'error' ? '✕' : '⚠'}</span>
                     {i.message}
+                  </li>
+                ))}
+                {tplNotes.map((n, k) => (
+                  <li key={`t${k}`} className={`issue ${n.outcome === 'replaced' ? 'issue-warning' : 'issue-template'}`}>
+                    <span className="issue-mark">⧉</span>
+                    <span>
+                      <b>{FIELD_LABEL[n.field]}</b>: {n.message}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -95,7 +139,7 @@ export function ResultPanel({ job, tab, onTab, active, pinned, onHover, onPin }:
                 <caption>{g.title}</caption>
                 <tbody>
                   {g.fields.map(({ key, en, he }) => {
-                    const f = r.fields[key]
+                    const f = fields[key]
                     if (!f)
                       return (
                         <tr key={key} className="missing">
@@ -252,6 +296,7 @@ export function ResultPanel({ job, tab, onTab, active, pinned, onHover, onPin }:
 function FieldRow({ f, rowProps, expanded, children }: { f: ExtractedField; rowProps: object; expanded: boolean; children: ReactNode }) {
   const shown = showValue(f.normalized, f.rawValue)
   const notes = valueNotes(f.normalized)
+  const fromTemplate = f.method.startsWith('template:')
   return (
     <>
       <tr {...rowProps}>
@@ -263,6 +308,11 @@ function FieldRow({ f, rowProps, expanded, children }: { f: ExtractedField; rowP
               {n}
             </span>
           ))}
+          {fromTemplate && (
+            <span className="note note-template" title="Supplied by the supplier template">
+              ⧉ template
+            </span>
+          )}
           {shown.replace(/[\s,]/g, '').toLowerCase() !== f.rawValue.replace(/[\s,]/g, '').toLowerCase() && (
             <div className="raw" dir="auto" title="As printed">
               {f.rawValue}

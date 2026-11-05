@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Page, Word } from '../../../src/model/types'
+import type { BBox, Page, Word } from '../../../src/model/types'
 import type { Box, Focus } from '../focus'
 import type { Job } from '../jobs'
 import { renderPages, type PagePicture } from '../pages'
@@ -9,10 +9,12 @@ interface Props {
   focus: Focus | null
   showWords: boolean
   onWordClick: (word: Word) => void
+  /** When set, dragging on a page draws a box (in page points) and reports it. */
+  onSelectBox?: (page: number, box: BBox) => void
 }
 
 /** The document's pages with the extracted evidence drawn over them. */
-export function DocumentViewer({ job, focus, showWords, onWordClick }: Props) {
+export function DocumentViewer({ job, focus, showWords, onWordClick, onSelectBox }: Props) {
   const doc = job.result!.document
   const [pictures, setPictures] = useState<(PagePicture | undefined)[]>([])
 
@@ -51,6 +53,7 @@ export function DocumentViewer({ job, focus, showWords, onWordClick }: Props) {
           boxes={focus?.boxes.filter((b) => b.page === page.number) ?? []}
           showWords={showWords}
           onWordClick={onWordClick}
+          onSelectBox={onSelectBox}
           many={doc.pages.length > 1}
         />
       ))}
@@ -65,11 +68,21 @@ interface PageProps {
   boxes: Box[]
   showWords: boolean
   onWordClick: (word: Word) => void
+  onSelectBox?: (page: number, box: BBox) => void
   many: boolean
 }
 
-function PageView({ page, picture, words, boxes, showWords, onWordClick, many }: PageProps) {
+function PageView({ page, picture, words, boxes, showWords, onWordClick, onSelectBox, many }: PageProps) {
   const holder = useRef<HTMLDivElement>(null)
+  const svg = useRef<SVGSVGElement>(null)
+  const [drag, setDrag] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null)
+  const toPage = (e: React.PointerEvent): { x: number; y: number } | null => {
+    const m = svg.current?.getScreenCTM()
+    if (!m) return null
+    const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse())
+    return { x: p.x, y: p.y }
+  }
+  const dragBox = drag && { x0: Math.min(drag.x0, drag.x1), y0: Math.min(drag.y0, drag.y1), x1: Math.max(drag.x0, drag.x1), y1: Math.max(drag.y0, drag.y1) }
   useEffect(() => {
     if (holder.current) holder.current.replaceChildren(...(picture?.kind === 'canvas' ? [picture.canvas] : []))
   }, [picture])
@@ -82,7 +95,28 @@ function PageView({ page, picture, words, boxes, showWords, onWordClick, many }:
       <div className="page-sheet" style={{ aspectRatio: `${page.width} / ${page.height}` }}>
         <div ref={holder} className="page-picture" />
         {!picture && <div className="page-loading">Drawing page…</div>}
-        <svg className="page-overlay" viewBox={`0 0 ${page.width} ${page.height}`} preserveAspectRatio="none">
+        <svg
+          ref={svg}
+          className={`page-overlay${onSelectBox ? ' is-selecting' : ''}`}
+          viewBox={`0 0 ${page.width} ${page.height}`}
+          preserveAspectRatio="none"
+          onPointerDown={(e) => {
+            if (!onSelectBox || e.button !== 0) return
+            const p = toPage(e)
+            if (p) setDrag({ x0: p.x, y0: p.y, x1: p.x, y1: p.y })
+          }}
+          onPointerMove={(e) => {
+            if (!drag) return
+            const p = toPage(e)
+            if (p) setDrag({ ...drag, x1: p.x, y1: p.y })
+          }}
+          onPointerUp={() => {
+            // A drag of a few points is a click: the word's own handler takes it.
+            if (dragBox && onSelectBox && dragBox.x1 - dragBox.x0 > 4 && dragBox.y1 - dragBox.y0 > 3) onSelectBox(page.number, dragBox)
+            setDrag(null)
+          }}
+          onPointerLeave={() => setDrag(null)}
+        >
           {drawText &&
             words.map((w) => (
               <text key={`t${w.id}`} x={w.bbox.x0} y={w.bbox.y1 - (w.bbox.y1 - w.bbox.y0) * 0.18} fontSize={(w.bbox.y1 - w.bbox.y0) * 0.95} textLength={Math.max(1, w.bbox.x1 - w.bbox.x0)} lengthAdjust="spacingAndGlyphs" className="page-text">
@@ -114,6 +148,7 @@ function PageView({ page, picture, words, boxes, showWords, onWordClick, many }:
               className={`hl hl-${b.kind}`}
             />
           ))}
+          {dragBox && <rect x={dragBox.x0} y={dragBox.y0} width={dragBox.x1 - dragBox.x0} height={dragBox.y1 - dragBox.y0} className="drag-rect" />}
         </svg>
       </div>
       {picture?.kind === 'none' && picture.reason !== 'text' && <p className="page-note">{picture.reason}</p>}

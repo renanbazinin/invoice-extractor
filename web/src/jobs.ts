@@ -2,8 +2,6 @@ import type { ExtractionResult } from '../../src/model/types'
 import { extract, type ExtractOptions } from '../../src/pipeline'
 import { ReadError } from '../../src/read/errors'
 import { sniffMimeType } from '../../src/read/sniff'
-import { CANONICAL_FIELDS } from '../../src/model/types'
-import { plainValue } from './format'
 
 export type OcrMode = NonNullable<ExtractOptions['ocr']>
 
@@ -19,6 +17,8 @@ export interface Job {
   result?: ExtractionResult
   error?: string
   ms?: number
+  /** The supplier template chosen by hand, null for none; undefined: matched automatically. */
+  supplierTemplate?: string | null
 }
 
 let seq = 0
@@ -41,25 +41,6 @@ export async function runJob(job: Job): Promise<Partial<Job>> {
     console.error(err)
     return { state: 'error', error: err instanceof Error ? err.message : String(err) }
   }
-}
-
-/** One row per document: every standard field's value and status (UTF-8 with BOM, for Excel). */
-export function toCsv(jobs: readonly Job[]): string {
-  const header = ['file', 'status', 'confidence', ...CANONICAL_FIELDS.flatMap((f) => [f, `${f} status`]), 'line items']
-  const rows = jobs
-    .filter((j) => j.result)
-    .map((j) => {
-      const r = j.result!
-      return [
-        j.name,
-        r.summary.status,
-        r.summary.confidence.toFixed(2),
-        ...CANONICAL_FIELDS.flatMap((f) => [plainValue(r.fields[f]), r.fields[f]?.status ?? '']),
-        String(r.lineItems.length),
-      ]
-    })
-  const cell = (s: string) => (/[",\n\r]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s)
-  return '﻿' + [header, ...rows].map((r) => r.map(cell).join(',')).join('\r\n') + '\r\n'
 }
 
 export function download(name: string, data: string | Uint8Array, type: string): void {

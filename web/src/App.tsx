@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import type { Word } from '../../src/model/types'
+import { applySupplierTemplate, exportFile, matchSupplierTemplate, type AppliedTemplate, type ExportDoc, type ExportTemplate, type SupplierTemplate, type Template } from '../../src/templates'
 import { DocumentViewer } from './components/DocumentViewer'
 import { ResultPanel, StatusPill, type Tab } from './components/ResultPanel'
 import { whereUsed, type Focus } from './focus'
 import { formatBytes, formatMs } from './format'
-import { download, jobFromFile, runJob, toCsv, type Job, type OcrMode } from './jobs'
+import { download, jobFromFile, runJob, type Job, type OcrMode } from './jobs'
+import { TemplatesView } from './templates/TemplatesView'
+import { blankSupplier, useTemplates } from './templates/useTemplates'
 
 const ACCEPT = '.pdf,.png,.jpg,.jpeg,.tif,.tiff,.webp,.txt,application/pdf,image/*,text/plain'
 const SAMPLES = [
@@ -13,7 +16,11 @@ const SAMPLES = [
   { file: 'english-invoice.pdf', label: 'English invoice (PDF)' },
 ]
 
+type View = 'documents' | 'templates'
+
 export function App() {
+  const store = useTemplates()
+  const [view, setView] = useState<View>('documents')
   const [jobs, setJobs] = useState<Job[]>([])
   const [selected, setSelected] = useState<string | null>(null)
   const [ocr, setOcr] = useState<OcrMode>('auto')
@@ -22,6 +29,9 @@ export function App() {
   const [pinned, setPinned] = useState<Focus | null>(null)
   const [showWords, setShowWords] = useState(false)
   const [dragging, setDragging] = useState(false)
+  const [editing, setEditing] = useState<Template | null>(null)
+  const [previewId, setPreviewId] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const busy = useRef(false)
   const input = useRef<HTMLInputElement>(null)
 
@@ -49,7 +59,8 @@ export function App() {
       for (const f of files) added.push(await jobFromFile(f, ocr))
       if (!added.length) return
       setJobs((js) => [...js, ...added])
-      setSelected((s) => s ?? added[0].id)
+      setSelected((s) => s ?? added[0]!.id)
+      setView('documents')
     },
     [ocr],
   )
@@ -60,8 +71,28 @@ export function App() {
     await addFiles([new File([await res.blob()], file)])
   }
 
+  // The supplier template of each document: chosen by hand, or matched by tax id or name.
+  const applied = useMemo(() => {
+    const m = new Map<string, AppliedTemplate | null>()
+    for (const j of jobs) {
+      if (!j.result) continue
+      if (j.supplierTemplate === null) m.set(j.id, null)
+      else if (j.supplierTemplate) {
+        const t = store.get(j.supplierTemplate)
+        m.set(j.id, t?.kind === 'supplier' ? applySupplierTemplate(j.result, t, 'manual') : null)
+      } else {
+        const hit = matchSupplierTemplate(j.result, store.supplierTemplates)
+        m.set(j.id, hit ? applySupplierTemplate(j.result, hit.template, hit.matchedBy) : null)
+      }
+    }
+    return m
+  }, [jobs, store])
+
+  const docs: ExportDoc[] = useMemo(() => jobs.filter((j) => j.result).map((j) => ({ name: j.name, result: j.result!, applied: applied.get(j.id) ?? null })), [jobs, applied])
+
   const job = jobs.find((j) => j.id === selected) ?? null
   const done = jobs.filter((j) => j.result)
+  const jobApplied = job ? (applied.get(job.id) ?? null) : null
 
   const select = (id: string) => {
     setSelected(id)
@@ -82,7 +113,7 @@ export function App() {
 
   const onWordClick = (w: Word) => {
     if (!job?.result) return
-    const used = whereUsed(job.result, w.id)
+    const used = whereUsed(job.result, jobApplied?.fields ?? job.result.fields, w.id)
     setTab(used.tab)
     setPinned(used.focus)
     requestAnimationFrame(() => document.getElementById(`row-${used.focus.key}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }))
@@ -93,6 +124,38 @@ export function App() {
     setDragging(false)
     void addFiles([...e.dataTransfer.files])
   }
+
+  /**
+   * Each document goes through its supplier template's export when it names one, else through
+   * the default export; one file per export template used.
+   */
+  const exportAll = () => {
+    const groups = new Map<string, ExportDoc[]>()
+    for (const d of docs) {
+      const routed = d.applied?.template.exportTemplateId
+      const id = routed && store.get(routed)?.kind === 'export' ? routed : store.defaultExport
+      groups.set(id, [...(groups.get(id) ?? []), d])
+    }
+    for (const [id, group] of groups) {
+      const f = exportFile(store.get(id) as ExportTemplate, group)
+      download(f.name, f.data, f.mime)
+    }
+    if (groups.size > 1) setNotice(`Exported ${docs.length} invoices into ${groups.size} files: some suppliers' templates send their invoices to their own export.`)
+  }
+
+  const createSupplierTemplate = (j: Job) => {
+    const r = j.result!
+    const t: SupplierTemplate = blankSupplier()
+    const id = r.fields['supplier.tax_id']?.normalized
+    const name = r.fields['supplier.name']?.rawValue
+    t.name = name ?? j.name.replace(/\.[^.]+$/, '')
+    t.match = { taxIds: id?.kind === 'id' ? [id.value] : [], names: name ? [name] : [] }
+    setPreviewId(j.id)
+    setEditing(t)
+    setView('templates')
+  }
+
+  const exportTemplates = store.exportTemplates
 
   return (
     <div
@@ -119,21 +182,42 @@ export function App() {
             runs locally
           </span>
         </div>
-        <div className="toolbar">
-          <label className="select" title="When to run OCR. Auto: only for pages without a usable text layer (scans, photos).">
-            OCR
-            <select value={ocr} onChange={(e) => setOcr(e.target.value as OcrMode)}>
-              <option value="auto">Auto</option>
-              <option value="always">Always</option>
-              <option value="never">Never</option>
-            </select>
-          </label>
-          <label className="check-toggle" title="Outline every word the reader found">
-            <input type="checkbox" checked={showWords} onChange={(e) => setShowWords(e.target.checked)} /> Show words
-          </label>
-          <button disabled={!done.length} onClick={() => download('invoices.csv', toCsv(done), 'text/csv;charset=utf-8')} title="One row per document, every standard field with its status">
-            Export CSV
+        <nav className="views" role="tablist">
+          <button role="tab" aria-selected={view === 'documents'} className={view === 'documents' ? 'is-on' : ''} onClick={() => setView('documents')}>
+            Documents {jobs.length > 0 && <span className="badge">{jobs.length}</span>}
           </button>
+          <button role="tab" aria-selected={view === 'templates'} className={view === 'templates' ? 'is-on' : ''} onClick={() => setView('templates')}>
+            Templates
+          </button>
+        </nav>
+        <div className="toolbar">
+          {view === 'documents' && (
+            <>
+              <label className="select" title="When to run OCR. Auto: only for pages without a usable text layer (scans, photos).">
+                OCR
+                <select value={ocr} onChange={(e) => setOcr(e.target.value as OcrMode)}>
+                  <option value="auto">Auto</option>
+                  <option value="always">Always</option>
+                  <option value="never">Never</option>
+                </select>
+              </label>
+              <label className="check-toggle" title="Outline every word the reader found">
+                <input type="checkbox" checked={showWords} onChange={(e) => setShowWords(e.target.checked)} /> Show words
+              </label>
+              <span className="export-group">
+                <select value={store.defaultExport} onChange={(e) => store.setDefaultExport(e.target.value)} aria-label="Export template" title="The export template for invoices whose supplier template names none">
+                  {exportTemplates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+                <button disabled={!done.length} onClick={exportAll} title="Export every processed invoice through its export template">
+                  Export{done.length ? ` ${done.length}` : ''}
+                </button>
+              </span>
+            </>
+          )}
           <button className="primary" onClick={() => input.current?.click()}>
             Add files
           </button>
@@ -151,7 +235,9 @@ export function App() {
         </div>
       </header>
 
-      {jobs.length === 0 ? (
+      {view === 'templates' ? (
+        <TemplatesView store={store} jobs={jobs} docs={docs} editing={editing} setEditing={setEditing} previewId={previewId} setPreviewId={setPreviewId} />
+      ) : jobs.length === 0 ? (
         <main className="welcome">
           <div className={`dropzone${dragging ? ' is-over' : ''}`} onClick={() => input.current?.click()} role="button" tabIndex={0}>
             <svg viewBox="0 0 48 48" width="44" height="44" aria-hidden>
@@ -162,7 +248,8 @@ export function App() {
             <span>PDF, PNG, JPEG, TIFF, WebP or text. Several at once is fine.</span>
           </div>
           <p className="privacy">
-            Everything runs in this browser tab: the files are never uploaded, and OCR runs on this computer. No templates, no AI model.
+            Everything runs in this browser tab: the files are never uploaded, and OCR runs on this computer. No AI model, and no template needed. Templates are there when you want them: to send the data
+            to your own Excel or CSV layout, or to teach the app a supplier&apos;s layout.
           </p>
           <div className="samples">
             <span>Or try a sample:</span>
@@ -194,6 +281,11 @@ export function App() {
                     {j.result && <StatusPill status={j.result.summary.status} />}
                     <span className="muted small">{j.ms !== undefined ? formatMs(j.ms) : formatBytes(j.size)}</span>
                   </div>
+                  {applied.get(j.id) && (
+                    <div className="job-tpl" dir="auto" title="Supplier template applied">
+                      ⧉ {applied.get(j.id)!.template.name}
+                    </div>
+                  )}
                   {j.state !== 'running' && (
                     <button
                       className="job-remove"
@@ -219,7 +311,24 @@ export function App() {
               <section className="viewer" onMouseLeave={() => setHover(null)}>
                 <DocumentViewer job={job} focus={hover ?? pinned} showWords={showWords} onWordClick={onWordClick} />
               </section>
-              <ResultPanel job={job} tab={tab} onTab={setTab} active={hover ?? pinned} pinned={pinned?.key ?? null} onHover={setHover} onPin={pin} />
+              <ResultPanel
+                job={job}
+                applied={jobApplied}
+                supplierTemplates={store.supplierTemplates}
+                onSupplierTemplate={(id) => patch(job.id, { supplierTemplate: id })}
+                onCreateSupplierTemplate={() => createSupplierTemplate(job)}
+                onEditSupplierTemplate={(t) => {
+                  setPreviewId(job.id)
+                  setEditing(structuredClone(t))
+                  setView('templates')
+                }}
+                tab={tab}
+                onTab={setTab}
+                active={hover ?? pinned}
+                pinned={pinned?.key ?? null}
+                onHover={setHover}
+                onPin={pin}
+              />
             </>
           ) : (
             <section className="viewer viewer-empty">
@@ -229,7 +338,12 @@ export function App() {
         </main>
       )}
 
-      {dragging && jobs.length > 0 && <div className="drop-overlay">Drop to add</div>}
+      {dragging && <div className="drop-overlay">Drop to add</div>}
+      {notice && (
+        <div className="toast" onAnimationEnd={() => setNotice(null)}>
+          {notice}
+        </div>
+      )}
     </div>
   )
 }

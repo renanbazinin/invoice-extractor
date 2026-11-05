@@ -2,6 +2,8 @@
 
 **[עברית](README.he.md)**
 
+**Try it:** https://renanbazinin.github.io/invoice-extractor/ runs entirely in your browser. Files are never uploaded.
+
 Reads invoices it has never seen before, in Hebrew and in English, and returns their fields: number, dates, amounts, VAT, supplier, customer and line items. It works without templates per supplier and without an LLM or any other AI service. Everything runs locally, either in the browser or in Node.
 
 Every value comes with the words on the page it was read from. Each field is marked:
@@ -67,6 +69,19 @@ import { extract } from './src/pipeline'
 
 const result = await extract(new Uint8Array(readFileSync('invoice.pdf')))
 console.log(result.fields.total?.normalized, result.fields.total?.status)
+```
+
+## Templates (optional)
+
+No template is needed to read an invoice. Templates are for two other jobs:
+
+- **Export templates** decide where the data goes: which columns, Excel/CSV/JSON, one row per invoice or per line item, and how to treat values that aren't verified. Eight are built in; fork one to make your own.
+- **Supplier templates** teach the app one supplier's invoices: fixed facts (its legal name), its own labels ("אסמכתא" → invoice number), boxes on its layout taught by dragging on the page, and the export template its invoices go to. They are matched automatically by tax ID or name. A value from a template is never marked verified, and a contradiction with a verified value goes to review.
+
+The app keeps your templates in the browser's local storage, and they can be downloaded and imported as files. The engine is in `src/templates/`, so it works from Node too:
+
+```ts
+import { BUILTIN_EXPORT, exportFile, matchSupplierTemplate, applySupplierTemplate } from './src/templates'
 ```
 
 ## Supported input
